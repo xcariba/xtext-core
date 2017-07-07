@@ -11,6 +11,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 
 import org.eclipse.emf.common.util.TreeIterator;
 import org.eclipse.emf.ecore.EObject;
@@ -26,8 +27,11 @@ import org.eclipse.xtext.formatting2.regionaccess.IHiddenRegion;
 import org.eclipse.xtext.formatting2.regionaccess.IHiddenRegionPart;
 import org.eclipse.xtext.formatting2.regionaccess.ISemanticRegion;
 import org.eclipse.xtext.formatting2.regionaccess.ISequentialRegion;
+import org.eclipse.xtext.formatting2.regionaccess.ISequentialRegionDiff;
 import org.eclipse.xtext.formatting2.regionaccess.ITextRegionAccess;
+import org.eclipse.xtext.formatting2.regionaccess.ITextRegionAccessDiff;
 import org.eclipse.xtext.formatting2.regionaccess.ITextSegment;
+import org.eclipse.xtext.formatting2.regionaccess.ITextSegmentDiff;
 import org.eclipse.xtext.formatting2.regionaccess.IWhitespace;
 import org.eclipse.xtext.grammaranalysis.impl.GrammarElementTitleSwitch;
 import org.eclipse.xtext.util.EmfFormatter;
@@ -37,6 +41,7 @@ import com.google.common.base.Joiner;
 import com.google.common.base.Strings;
 import com.google.common.collect.LinkedListMultimap;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
 
 /**
@@ -69,6 +74,85 @@ public class TextRegionAccessToString {
 				return 1;
 			}
 		};
+	}
+
+	protected static class DiffColumn {
+		private ITextRegionAccessDiff access;
+		private Map<ITextSegment, String> diffs;
+		private String empty;
+
+		public DiffColumn(ITextRegionAccess access) {
+			if (access instanceof ITextRegionAccessDiff) {
+				this.diffs = Maps.newHashMap();
+				this.access = (ITextRegionAccessDiff) access;
+				int width = 0;
+				int i = 1;
+				for (ITextSegmentDiff diff : this.access.getDifferences()) {
+					if (diff instanceof ISequentialRegionDiff) {
+						ISequentialRegionDiff sdiff = (ISequentialRegionDiff) diff;
+						ISequentialRegion current = sdiff.getModifiedFirstRegion();
+						ISequentialRegion last = sdiff.getModifiedLastRegion();
+						String text = i + " ";
+						if (width < text.length()) {
+							width = text.length();
+						}
+						while (current != null) {
+							diffs.put(current, text);
+							if (current.equals(last)) {
+								break;
+							}
+							current = current.getNextSequentialRegion();
+						}
+						i++;
+					}
+				}
+				this.empty = Strings.repeat(" ", width);
+			} else {
+				this.access = null;
+				this.empty = "";
+			}
+		}
+
+		public boolean isDiff() {
+			return this.access != null;
+		}
+
+		public String get(ITextSegment seg) {
+			if (this.access == null) {
+				return "";
+			}
+			String result = this.diffs.get(seg);
+			if (result != null)
+				return result;
+			return empty;
+		}
+
+		public void appendDiffs(TextRegionListToString result, TextRegionAccessToString toStr) {
+			if (this.access == null) {
+				return;
+			}
+			int i = 1;
+			for (ITextSegmentDiff diff : this.access.getDifferences()) {
+				if (diff instanceof ISequentialRegionDiff) {
+					ISequentialRegionDiff sdiff = (ISequentialRegionDiff) diff;
+					ISequentialRegion current = sdiff.getOriginalFirstRegion();
+					ISequentialRegion last = sdiff.getOriginalLastRegion();
+					List<ITextSegment> regions = Lists.newArrayList();
+					while (current != null) {
+						regions.add(current);
+						if (current == last) {
+							break;
+						}
+						current = current.getNextSequentialRegion();
+					}
+					result.add("------------ diff " + i + " ------------", false);
+					toStr.appendRegions(result, regions, new DiffColumn(null));
+					i++;
+				}
+			}
+
+		}
+
 	}
 
 	private static final int TITLE_WIDTH = 2;
@@ -145,11 +229,7 @@ public class TextRegionAccessToString {
 		return className;
 	}
 
-	@Override
-	public String toString() {
-		List<ITextSegment> list = toTokenAndGapList();
-		if (list.isEmpty())
-			return "(empty)";
+	protected void appendRegions(TextRegionListToString result, List<ITextSegment> list, DiffColumn diff) {
 		Multimap<IHiddenRegion, IEObjectRegion> hiddens = LinkedListMultimap.create();
 		List<String> errors = Lists.newArrayList();
 		ITextRegionAccess access = list.get(0).getTextRegionAccess();
@@ -171,12 +251,6 @@ public class TextRegionAccessToString {
 				else
 					hiddens.put(next, obj);
 			}
-		}
-		TextRegionListToString result = new TextRegionListToString();
-		if (!hideColumnExplanation) {
-			result.add("Columns: 1:offset 2:length 3:kind 4: text 5:grammarElement", false);
-			result.add("Kind: H=IHiddenRegion S=ISemanticRegion B/E=IEObjectRegion", false);
-			result.add("", false);
 		}
 		for (String error : errors)
 			result.add(error, false);
@@ -218,15 +292,36 @@ public class TextRegionAccessToString {
 			}
 			for (IEObjectRegion obj : previous) {
 				indentation--;
-				result.add(indent(indentation) + EOBJECT_END_PADDED + toString(obj));
+				result.add(diff.empty + indent(indentation) + EOBJECT_END_PADDED + toString(obj));
 			}
 			String indent = indent(indentation);
-			result.add(region, indent + Joiner.on("\n").join(middle).replace("\n", "\n" + indent));
+			result.add(region, diff.get(region) + indent + Joiner.on("\n").join(middle).replace("\n", "\n" + indent));
 			for (IEObjectRegion obj : next) {
-				result.add(indent(indentation) + EOBJECT_BEGIN_PADDED + toString(obj));
+				result.add(diff.empty + indent(indentation) + EOBJECT_BEGIN_PADDED + toString(obj));
 				indentation++;
 			}
 		}
+	}
+
+	@Override
+	public String toString() {
+		List<ITextSegment> list = toTokenAndGapList();
+		if (list.isEmpty())
+			return "(empty)";
+		ITextRegionAccess access = list.get(0).getTextRegionAccess();
+		DiffColumn diff = new DiffColumn(access);
+		TextRegionListToString result = new TextRegionListToString();
+		if (!hideColumnExplanation) {
+			if (diff.isDiff()) {
+				result.add("Columns: 1:offset 2:length 3:diff 4:kind 5: text 6:grammarElement", false);
+			} else {
+				result.add("Columns: 1:offset 2:length 3:kind 4: text 5:grammarElement", false);
+			}
+			result.add("Kind: H=IHiddenRegion S=ISemanticRegion B/E=IEObjectRegion", false);
+			result.add("", false);
+		}
+		appendRegions(result, list, diff);
+		diff.appendDiffs(result, this);
 		return result.toString();
 	}
 
