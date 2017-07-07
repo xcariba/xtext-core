@@ -81,5 +81,24 @@ Workflow {
 				partialParsing = true
 			}
 		}
+		language = StandardLanguage {
+			name = "org.eclipse.xtext.ide.tests.testlanguage.PartialSerializationTestLanguage"
+			fileExtensions = "pstl"
+			serializer = {
+				generateStub = false
+			}
+			validator = {
+			// composedCheck = "org.eclipse.xtext.validation.NamesAreUniqueValidator"
+			}
+			junitSupport = {
+				generateStub = false
+			}
+			parserGenerator = {
+				partialParsing = true
+			}
+			formatter = {
+				generateStub = true
+			}
+		}
 	}
 }
