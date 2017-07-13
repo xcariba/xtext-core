@@ -64,6 +64,8 @@ public class WizardConfiguration {
   
   private JavaVersion javaVersion = JavaVersion.JAVA8;
   
+  private boolean createLanguageServerJar = false;
+  
   private final LanguageDescriptor language = new LanguageDescriptor();
   
   private final RuntimeProjectDescriptor runtimeProject = new RuntimeProjectDescriptor(this);
@@ -208,6 +210,15 @@ public class WizardConfiguration {
   
   public void setJavaVersion(final JavaVersion javaVersion) {
     this.javaVersion = javaVersion;
+  }
+  
+  @Pure
+  public boolean isCreateLanguageServerJar() {
+    return this.createLanguageServerJar;
+  }
+  
+  public void setCreateLanguageServerJar(final boolean createLanguageServerJar) {
+    this.createLanguageServerJar = createLanguageServerJar;
   }
   
   @Pure

@@ -31,6 +31,7 @@ class WizardConfiguration {
 	
 	boolean needsGradleWrapper = true
 	JavaVersion javaVersion = JavaVersion.JAVA8
+	boolean createLanguageServerJar = false
 	
 	val LanguageDescriptor language = new LanguageDescriptor
 

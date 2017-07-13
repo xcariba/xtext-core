@@ -129,6 +129,45 @@ class CliWizardIntegrationTest {
 			intellijProject.enabled = true
 			p2Project.enabled = true
 			lineDelimiter = "\n"
+		],
+		newProjectConfig => [
+			baseName = "org.xtext.example.mavenLS"
+			preferredBuildSystem = BuildSystem.MAVEN
+			sourceLayout = SourceLayout.PLAIN
+			projectLayout = ProjectLayout.HIERARCHICAL
+			runtimeProject.testProject.enabled = false
+			uiProject.enabled = false
+			uiProject.testProject.enabled = false
+			ideProject.enabled = true
+			webProject.enabled = false
+			lineDelimiter = "\n"
+			createLanguageServerJar = true
+		],
+		newProjectConfig => [
+			baseName = "org.xtext.example.mavenTychoLS"
+			preferredBuildSystem = BuildSystem.MAVEN
+			sourceLayout = SourceLayout.PLAIN
+			projectLayout = ProjectLayout.HIERARCHICAL
+			runtimeProject.testProject.enabled = false
+			uiProject.enabled = true
+			uiProject.testProject.enabled = false
+			ideProject.enabled = true
+			webProject.enabled = false
+			lineDelimiter = "\n"
+			createLanguageServerJar = true
+		],
+		newProjectConfig => [
+			baseName = "org.xtext.example.gradleLS"
+			preferredBuildSystem = BuildSystem.GRADLE
+			sourceLayout = SourceLayout.PLAIN
+			projectLayout = ProjectLayout.HIERARCHICAL
+			runtimeProject.testProject.enabled = false
+			uiProject.enabled = false
+			uiProject.testProject.enabled = false
+			ideProject.enabled = true
+			webProject.enabled = false
+			lineDelimiter = "\n"
+			createLanguageServerJar = true
 		]
 	]
 

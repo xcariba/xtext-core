@@ -1,0 +1,2 @@
+include 'org.xtext.example.gradleLS'
+include 'org.xtext.example.gradleLS.ide'
